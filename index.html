@@ -13,13 +13,47 @@ body {
   font-family: Arial, sans-serif;
 }
 canvas { display: block; }
+
+#mobileBlock {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  color: white;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-size: 22px;
+  padding: 20px;
+  z-index: 9999;
+}
 </style>
 </head>
 
 <body>
+
+<div id="mobileBlock">
+  Esta experiencia está disponible solo en computadora 💻<br><br>
+  Por favor abre este enlace desde un PC
+</div>
+
 <canvas id="canvas"></canvas>
 
 <script>
+// 🚫 BLOQUEO MÓVIL
+function isMobile() {
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+if (isMobile() || window.innerWidth < 768) {
+  document.getElementById("mobileBlock").style.display = "flex";
+  document.getElementById("canvas").style.display = "none";
+  throw new Error("Bloqueado en móvil");
+}
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -64,7 +98,7 @@ function createHeartPoints() {
   return pts;
 }
 
-// ⭐ ESTRELLA CON TRAZOS
+// ⭐ ESTRELLA
 function createStarShape() {
   const pts = [];
   const spikes = 5;
@@ -98,7 +132,7 @@ function createStarShape() {
   return pts;
 }
 
-// 🎂 PASTEL CON GLOBOS (RESTAURADO)
+// 🎂 PASTEL COMPLETO
 function createCakePoints() {
   const off = document.createElement("canvas");
   const octx = off.getContext("2d");
@@ -113,17 +147,14 @@ function createCakePoints() {
   octx.strokeStyle = "white";
   octx.lineWidth = 6;
 
-  // base
   octx.beginPath();
   octx.roundRect(cx - 140, cy + 20, 280, 120, 20);
   octx.fill();
 
-  // capa
   octx.beginPath();
   octx.roundRect(cx - 110, cy - 60, 220, 90, 20);
   octx.fill();
 
-  // detalle
   for (let i = -100; i <= 100; i += 20) {
     octx.beginPath();
     octx.arc(cx + i, cy + 20, 10, 0, Math.PI);
@@ -133,19 +164,17 @@ function createCakePoints() {
   // velas
   for (let i = -60; i <= 60; i += 60) {
     octx.fillRect(cx + i - 5, cy - 120, 10, 50);
-
     octx.beginPath();
     octx.ellipse(cx + i, cy - 135, 6, 10, 0, 0, Math.PI * 2);
     octx.fill();
   }
 
-  // 🎈 GLOBOS ORIGINALES
+  // globos
   function drawBalloon(x, y) {
     octx.beginPath();
     octx.ellipse(x, y, 35, 45, 0, 0, Math.PI * 2);
     octx.fill();
 
-    // nudo
     octx.beginPath();
     octx.moveTo(x - 5, y + 40);
     octx.lineTo(x + 5, y + 40);
@@ -153,7 +182,6 @@ function createCakePoints() {
     octx.closePath();
     octx.fill();
 
-    // cuerda
     octx.beginPath();
     octx.moveTo(x, y + 50);
     octx.lineTo(x, y + 110);
@@ -198,7 +226,7 @@ function map(p, shape) {
   }
 }
 
-// ⭐ ESTRELLAS
+// PARTÍCULAS
 let stars = [];
 
 function createStars(shape) {
@@ -220,21 +248,35 @@ function createStars(shape) {
   }
 }
 
-// ===== FORMAS =====
-const heart = createHeartPoints();
-const starShape = createStarShape();
-const cake = createCakePoints();
-
-createStars({ pts: heart });
-
 // ===== ESTADO =====
 let phase = "forming";
 let textOpacity = 0;
+let currentMessage = "";
+let showMessage = false;
+let textOffsetY = 180;
 
-// ===== DIBUJO =====
+// TEXTO
+function drawText() {
+  if (!showMessage) return;
+
+  ctx.save();
+  ctx.globalAlpha = textOpacity;
+  ctx.textAlign = "center";
+  ctx.fillStyle = "white";
+
+  const lines = currentMessage.split("\n");
+
+  ctx.font = "24px Arial";
+
+  lines.forEach((line, i) => {
+    ctx.fillText(line, window.innerWidth/2, window.innerHeight/2 + textOffsetY + (i * 28));
+  });
+
+  ctx.restore();
+}
+
 function drawStars() {
   stars.forEach(s => {
-
     if (phase === "explode") {
       s.x += s.vx;
       s.y += s.vy;
@@ -252,31 +294,17 @@ function drawStars() {
   });
 }
 
-// TEXTO
-function drawText() {
-  ctx.save();
-  ctx.globalAlpha = textOpacity;
-  ctx.textAlign = "center";
-  ctx.fillStyle = "white";
-
-  ctx.font = "bold 48px Arial";
-  ctx.fillText("Feliz cumpleaños Nao! <3", window.innerWidth/2, window.innerHeight/2 + 200);
-
-  ctx.font = "24px Arial";
-  ctx.fillText("Te desean Donovan, Valeria y Derek :D", window.innerWidth/2, window.innerHeight/2 + 240);
-
-  ctx.restore();
-}
-
 // LOOP
 function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawBackground();
   drawStars();
 
-  if (phase === "text") {
+  if (showMessage) {
     if (textOpacity < 1) textOpacity += 0.01;
     drawText();
+  } else {
+    textOpacity = 0;
   }
 }
 
@@ -284,31 +312,70 @@ function animate() {
   draw();
   requestAnimationFrame(animate);
 }
-
-// ⏱️ TIMELINE (ESTRELLA MÁS TIEMPO)
-setTimeout(()=> phase="explode", 5000);
-
-setTimeout(()=>{
-  createStars({pts: starShape});
-  phase="forming";
-},8000);
-
-// 🔥 MÁS TIEMPO AQUÍ (antes 11000)
-setTimeout(()=> phase="explode", 13000);
-
-setTimeout(()=>{
-  createStars(cake);
-  phase="forming";
-},16000);
-
-setTimeout(()=> phase="text", 20000);
-
 animate();
 
-window.addEventListener("resize", ()=>{
-  resizeCanvas();
+// ===== FORMAS =====
+const heart = createHeartPoints();
+const starShape = createStarShape();
+const cake = createCakePoints();
+
+// ⭐ ESTRELLA (10s)
+createStars({pts: starShape});
+textOffsetY = 180;
+
+setTimeout(()=>{
+  showMessage = true;
+  currentMessage = `Hola Nao aquí Donovan,
+me entere que hoy es un día especial
+y quería decirte unas cosas...`;
+},1000);
+
+setTimeout(()=>{
+  phase="explode";
+  showMessage = false;
+},10000);
+
+// ❤️ CORAZÓN (22s)
+setTimeout(()=>{
+  createStars({pts: heart});
+  phase="forming";
+  textOffsetY = 40;
+},12000);
+
+setTimeout(()=>{
+  showMessage = true;
+  currentMessage = `No tengo mucho que decir, lamentablemente pienso
+que no eh tenido la oportunidad de llegar a conocerte del todo,
+pero de lo poco que hemos hablado y las cosas que eh escuchado
+sobre ti no me cabe duda de la gran persona que eres.
+
+Una increíble prima para muchos, una gran amiga para todos
+y una fuente de inspiración para otros.
+
+Has logrado cosas increíbles y puedes seguir haciéndolo.
+Cuídate mucho ojala poder saber de ti pronto y que podamos conocernos más,
+espero poder vernos en otra ocasión y no te olvides de sonreír :D`;
+},14000);
+
+setTimeout(()=>{
+  phase="explode";
+  showMessage = false;
+},34000);
+
+// 🎂 FINAL
+setTimeout(()=>{
   createStars(cake);
-});
+  phase="forming";
+  textOffsetY = 180;
+},36000);
+
+setTimeout(()=>{
+  showMessage = true;
+  currentMessage = `Feliz cumpleaños Nao! <3
+Te desean Donovan, Valeria y Derek :D`;
+},39000);
+
+window.addEventListener("resize", resizeCanvas);
 </script>
 </body>
 </html>
