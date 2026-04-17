@@ -77,7 +77,7 @@ function drawBackground() {
   }
 }
 
-// ===== CORAZÓN GRANDE =====
+// ===== CORAZÓN =====
 function createHeartPoints() {
   const pts = [];
   for (let t = 0; t < Math.PI * 2; t += 0.015) {
@@ -88,7 +88,7 @@ function createHeartPoints() {
   return pts;
 }
 
-// ===== PASTEL MÁS GRANDE =====
+// ===== PASTEL =====
 function createCakePoints() {
   const off = document.createElement("canvas");
   const octx = off.getContext("2d");
@@ -101,24 +101,20 @@ function createCakePoints() {
 
   octx.fillStyle = "white";
 
-  // base
   octx.beginPath();
   octx.roundRect(cx - 150, cy + 20, 300, 140, 25);
   octx.fill();
 
-  // capa
   octx.beginPath();
   octx.roundRect(cx - 120, cy - 70, 240, 110, 25);
   octx.fill();
 
-  // glaseado
   for (let i = -120; i <= 120; i += 20) {
     octx.beginPath();
     octx.arc(cx + i, cy + 20, 10, 0, Math.PI);
     octx.fill();
   }
 
-  // velas
   for (let i = -70; i <= 70; i += 70) {
     octx.fillRect(cx + i - 5, cy - 140, 10, 60);
   }
@@ -142,10 +138,10 @@ const cake = createCakePoints();
 // ===== MAP =====
 function map(p, shape) {
   if (shape.w) {
-    const scale = Math.min(window.innerWidth/shape.w, window.innerHeight/shape.h) * 0.9;
+    const scale = Math.min(window.innerWidth/shape.w, window.innerHeight/shape.h) * 0.75; // 🔧 reducido
     return {
       x: (p.x - shape.w/2)*scale + window.innerWidth/2,
-      y: (p.y - shape.h/2)*scale + window.innerHeight/2
+      y: (p.y - shape.h/2)*scale + window.innerHeight/2 - 80 // 🔧 sube pastel
     };
   } else {
     const scale = Math.min(window.innerWidth, window.innerHeight) * 0.04;
@@ -216,17 +212,20 @@ function drawStars() {
   }
 }
 
+// ===== TEXTO CORREGIDO =====
 function drawText() {
   ctx.save();
   ctx.globalAlpha = textOpacity;
   ctx.textAlign = "center";
   ctx.fillStyle = "white";
 
+  const baseY = window.innerHeight - 60;
+
   ctx.font = "bold 32px Arial";
-  ctx.fillText("Feliz cumpleaños Nao!", window.innerWidth/2, window.innerHeight - 120);
+  ctx.fillText("Feliz cumpleaños Nao!", window.innerWidth/2, baseY - 40);
 
   ctx.font = "18px Arial";
-  ctx.fillText("Te queremos mucho 🎉", window.innerWidth/2, window.innerHeight - 80);
+  ctx.fillText("Te desean Donovan, Valeria y Derek :D", window.innerWidth/2, baseY);
 
   ctx.restore();
 }
