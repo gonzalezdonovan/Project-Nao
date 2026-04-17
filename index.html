@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feliz Cumpleaños</title>
+
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: radial-gradient(circle, #020111, #000);
+    font-family: Arial, sans-serif;
+  }
+
+  canvas { display: block; }
+
+  #mensajePC {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-align: center;
+    padding: 20px;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="mensajePC">
+  <h2>📱 Abre esta sorpresa en tu celular</h2>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const isMobile = window.innerWidth < 768;
+
+if (!isMobile) {
+  document.getElementById("mensajePC").style.display = "flex";
+} else {
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + "px";
+  canvas.style.height = window.innerHeight + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+
+// ===== FONDO =====
+const bgStars = Array.from({length: 70}, () => ({
+  x: Math.random() * window.innerWidth,
+  y: Math.random() * window.innerHeight,
+  size: Math.random() * 1.2,
+  speed: Math.random() * 0.15 + 0.03
+}));
+
+function drawBackground() {
+  for (let s of bgStars) {
+    s.y += s.speed;
+    if (s.y > window.innerHeight) s.y = 0;
+
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+    ctx.fillStyle = "white";
+    ctx.fill();
+  }
+}
+
+// ===== CORAZÓN GRANDE =====
+function createHeartPoints() {
+  const pts = [];
+  for (let t = 0; t < Math.PI * 2; t += 0.015) {
+    let x = 16 * Math.pow(Math.sin(t), 3);
+    let y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+    pts.push({x, y});
+  }
+  return pts;
+}
+
+// ===== PASTEL MÁS GRANDE =====
+function createCakePoints() {
+  const off = document.createElement("canvas");
+  const octx = off.getContext("2d");
+
+  off.width = 600;
+  off.height = 600;
+
+  const cx = 300;
+  const cy = 300;
+
+  octx.fillStyle = "white";
+
+  // base
+  octx.beginPath();
+  octx.roundRect(cx - 150, cy + 20, 300, 140, 25);
+  octx.fill();
+
+  // capa
+  octx.beginPath();
+  octx.roundRect(cx - 120, cy - 70, 240, 110, 25);
+  octx.fill();
+
+  // glaseado
+  for (let i = -120; i <= 120; i += 20) {
+    octx.beginPath();
+    octx.arc(cx + i, cy + 20, 10, 0, Math.PI);
+    octx.fill();
+  }
+
+  // velas
+  for (let i = -70; i <= 70; i += 70) {
+    octx.fillRect(cx + i - 5, cy - 140, 10, 60);
+  }
+
+  const img = octx.getImageData(0, 0, 600, 600);
+  const pts = [];
+
+  for (let y = 0; y < 600; y += 2) {
+    for (let x = 0; x < 600; x += 2) {
+      const i = (y * 600 + x) * 4;
+      if (img.data[i + 3] > 120) pts.push({x,y});
+    }
+  }
+
+  return { pts, w: 600, h: 600 };
+}
+
+const heart = createHeartPoints();
+const cake = createCakePoints();
+
+// ===== MAP =====
+function map(p, shape) {
+  if (shape.w) {
+    const scale = Math.min(window.innerWidth/shape.w, window.innerHeight/shape.h) * 0.9;
+    return {
+      x: (p.x - shape.w/2)*scale + window.innerWidth/2,
+      y: (p.y - shape.h/2)*scale + window.innerHeight/2
+    };
+  } else {
+    const scale = Math.min(window.innerWidth, window.innerHeight) * 0.04;
+    return {
+      x: p.x*scale + window.innerWidth/2,
+      y: -p.y*scale + window.innerHeight/2
+    };
+  }
+}
+
+// ===== ESTRELLAS =====
+let stars = [];
+
+function createStars(shapeObj) {
+  stars = [];
+  const pts = shapeObj.pts || shapeObj;
+
+  for (let i = 0; i < pts.length; i += 2) {
+    const m = map(pts[i], shapeObj);
+    stars.push({
+      x: Math.random()*window.innerWidth,
+      y: Math.random()*window.innerHeight,
+      tx: m.x,
+      ty: m.y,
+      size: Math.random()*1.5+0.5,
+      vx: (Math.random()-0.5)*5,
+      vy: (Math.random()-0.5)*5
+    });
+  }
+}
+
+createStars({pts: heart});
+
+// ===== EFECTOS =====
+let phase = "floating";
+let explosionRadius = 0;
+let flash = 0;
+let textOpacity = 0;
+
+// ===== ANIMACIÓN =====
+function drawStars() {
+  for (let s of stars) {
+
+    if (phase === "forming") {
+      s.x += (s.tx - s.x)*0.03;
+      s.y += (s.ty - s.y)*0.03;
+
+    } else if (phase === "break") {
+      let dx = s.x - window.innerWidth/2;
+      let dy = s.y - window.innerHeight/2;
+      let dist = Math.sqrt(dx*dx + dy*dy) || 1;
+
+      let force = 6/dist;
+      s.vx += dx*force;
+      s.vy += dy*force;
+
+      s.x += s.vx;
+      s.y += s.vy;
+
+      s.vx *= 0.96;
+      s.vy *= 0.96;
+    }
+
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+    ctx.fillStyle = "white";
+    ctx.fill();
+  }
+}
+
+function drawText() {
+  ctx.save();
+  ctx.globalAlpha = textOpacity;
+  ctx.textAlign = "center";
+  ctx.fillStyle = "white";
+
+  ctx.font = "bold 32px Arial";
+  ctx.fillText("Feliz cumpleaños Nao!", window.innerWidth/2, window.innerHeight - 120);
+
+  ctx.font = "18px Arial";
+  ctx.fillText("Te queremos mucho 🎉", window.innerWidth/2, window.innerHeight - 80);
+
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  drawBackground();
+  drawStars();
+
+  if (phase === "break") {
+    explosionRadius += 10;
+
+    ctx.beginPath();
+    ctx.arc(window.innerWidth/2, window.innerHeight/2, explosionRadius, 0, Math.PI*2);
+    ctx.strokeStyle = "rgba(255,255,255,0.2)";
+    ctx.stroke();
+  }
+
+  if (flash > 0) {
+    ctx.fillStyle = "rgba(255,255,255,"+flash+")";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    flash *= 0.9;
+  }
+
+  if (phase === "text") {
+    if (textOpacity < 1) textOpacity += 0.02;
+    drawText();
+  }
+}
+
+function animate() {
+  draw();
+  requestAnimationFrame(animate);
+}
+
+// ===== TIMELINE =====
+setTimeout(()=>phase="forming", 1500);
+
+setTimeout(()=>{
+  phase="break";
+  flash = 0.8;
+}, 6000);
+
+setTimeout(()=>{
+  createStars(cake);
+  stars.forEach(s => { s.vx=0; s.vy=0; });
+  phase="forming";
+}, 9000);
+
+setTimeout(()=>phase="text", 13000);
+
+animate();
+
+window.addEventListener("resize", ()=>{
+  resizeCanvas();
+  createStars(cake);
+});
+
+}
+</script>
+</body>
+</html>
